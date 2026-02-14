@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { writeFile } from 'fs/promises';
+import path from 'path';
 
 export async function GET(request: Request) {
     try {
@@ -9,23 +10,23 @@ export async function GET(request: Request) {
 
         let query = 'SELECT * FROM barang WHERE is_deleted = 0';
         const params: any[] = [];
+        let paramIndex = 1;
 
         if (search) {
-            query += ' AND nama_barang LIKE ?';
+            query += ` AND nama_barang ILIKE $${paramIndex}`;
             params.push(`%${search}%`);
+            paramIndex++;
         }
 
         query += ' ORDER BY barang_id DESC';
 
-        const [rows] = await pool.query<RowDataPacket[]>(query, params);
+        const { rows } = await pool.query(query, params);
         return NextResponse.json(rows);
     } catch (error) {
+        console.error(error);
         return NextResponse.json({ error: 'Database Error' }, { status: 500 });
     }
 }
-
-import { writeFile } from 'fs/promises';
-import path from 'path';
 
 export async function POST(request: Request) {
     try {
@@ -53,21 +54,23 @@ export async function POST(request: Request) {
             gambar = `/uploads/${filename}`;
         }
 
-        const [result] = await pool.query<ResultSetHeader>(
-            'INSERT INTO barang (nama_barang, harga_beli, harga_jual, stok, stok_minimum, satuan, gambar, is_deleted) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
+        const { rows: result } = await pool.query(
+            'INSERT INTO barang (nama_barang, harga_beli, harga_jual, stok, stok_minimum, satuan, gambar, is_deleted) VALUES ($1, $2, $3, $4, $5, $6, $7, 0) RETURNING barang_id',
             [nama_barang, harga_beli, harga_jual, stok, stok_minimum, satuan, gambar]
         );
+
+        const newId = result[0].barang_id;
 
         // Record Log
         if (stok > 0) {
             await pool.query(
-                'INSERT INTO stok_log (barang_id, nama_barang, user_id, jenis, jumlah, keterangan) VALUES (?, ?, ?, ?, ?, ?)',
-                [result.insertId, nama_barang, user_id, 'masuk', stok, 'Stok Awal']
+                'INSERT INTO stok_log (barang_id, nama_barang, user_id, jenis, jumlah, keterangan) VALUES ($1, $2, $3, $4, $5, $6)',
+                [newId, nama_barang, user_id, 'masuk', stok, 'Stok Awal']
             );
         }
 
         return NextResponse.json({
-            id: result.insertId,
+            id: newId,
             nama_barang,
             harga_beli,
             harga_jual,

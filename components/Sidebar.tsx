@@ -29,7 +29,7 @@ export default function Sidebar() {
     const links = [
         { name: 'Dashboard', href: '/dashboard', icon: Home },
         { name: 'Stok Barang', href: '/dashboard/inventory', icon: Package },
-        ...(role === 'karyawan' ? [{ name: 'Kasir', href: '/dashboard/cashier', icon: ShoppingCart }] : []),
+        ...(role === 'kasir' ? [{ name: 'Kasir', href: '/dashboard/cashier', icon: ShoppingCart }] : []),
         ...(role === 'admin' ? [
             { name: 'Laporan', href: '/dashboard/reports', icon: BarChart3 },
             { name: 'Kelola User', href: '/dashboard/users', icon: User }

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { RowDataPacket } from 'mysql2';
 
 export async function POST(request: Request) {
     try {
@@ -10,8 +9,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
         }
 
-        const [rows] = await pool.query<RowDataPacket[]>(
-            'SELECT user_id, username, nama, role, password FROM users WHERE username = ?',
+        const { rows } = await pool.query(
+            'SELECT user_id, username, nama, role, password FROM users WHERE username = $1',
             [username]
         );
 

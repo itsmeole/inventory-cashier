@@ -17,7 +17,7 @@ export default function UsersPage() {
         username: '',
         password: '',
         nama: '',
-        role: 'karyawan'
+        role: 'kasir'
     });
 
     useEffect(() => {
@@ -60,7 +60,7 @@ export default function UsersPage() {
 
         setShowModal(false);
         setEditingUser(null);
-        setFormData({ username: '', password: '', nama: '', role: 'karyawan' });
+        setFormData({ username: '', password: '', nama: '', role: 'kasir' });
         fetchUsers();
         Swal.fire('Sukses', 'Data user berhasil disimpan', 'success');
     };
@@ -105,7 +105,7 @@ export default function UsersPage() {
                     <UserCog size={28} /> Kelola User
                 </h2>
                 <button
-                    onClick={() => { setEditingUser(null); setFormData({ username: '', password: '', nama: '', role: 'karyawan' }); setShowModal(true); }}
+                    onClick={() => { setEditingUser(null); setFormData({ username: '', password: '', nama: '', role: 'kasir' }); setShowModal(true); }}
                     className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
                     <Plus size={18} /> Tambah User
@@ -200,7 +200,7 @@ export default function UsersPage() {
                                     value={formData.role}
                                     onChange={e => setFormData({ ...formData, role: e.target.value })}
                                 >
-                                    <option value="karyawan">Karyawan (Kasir)</option>
+                                    <option value="kasir">Kasir</option>
                                     <option value="admin">Admin / Pemilik</option>
                                 </select>
                             </div>

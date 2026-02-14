@@ -1,35 +1,38 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
+
+export async function GET() {
+    try {
+        const { rows } = await pool.query('SELECT * FROM transaksi ORDER BY tanggal_transaksi DESC');
+        return NextResponse.json(rows);
+    } catch (error) {
+        return NextResponse.json({ error: 'Database Error' }, { status: 500 });
+    }
+}
 
 export async function POST(request: Request) {
-    const connection = await pool.getConnection(); // Get dedicated connection for transaction
+    const client = await pool.connect();
     try {
         const body = await request.json();
-        const { user_id, items, total_harga, metode_pembayaran } = body;
-        // items: [{ barang_id, qty, harga_satuan }]
+        const { items, total_harga, bayar, kembalian, metode_pembayaran, user_id } = body;
 
-        if (!items || items.length === 0) {
-            return NextResponse.json({ error: 'No items in cart' }, { status: 400 });
-        }
+        await client.query('BEGIN');
 
-        await connection.beginTransaction();
-
-        // 1. Create Transaction Header
-        const [transResult] = await connection.query<ResultSetHeader>(
-            'INSERT INTO transaksi (user_id, total_harga, metode_pembayaran) VALUES (?, ?, ?)',
-            [user_id || 1, total_harga, metode_pembayaran || 'Tunai'] // Default user_id 1 (Admin) if not sent
+        // Insert Transaction Header
+        const { rows: transResult } = await client.query(
+            'INSERT INTO transaksi (user_id, total_harga, bayar, kembalian, metode_pembayaran) VALUES ($1, $2, $3, $4, $5) RETURNING transaksi_id',
+            [user_id, total_harga, bayar, kembalian, metode_pembayaran]
         );
-        const transaksi_id = transResult.insertId;
+        const transaksi_id = transResult[0].transaksi_id;
 
-        // 2. Process Items
+        // Insert Details
         for (const item of items) {
             const { barang_id, qty, harga_satuan } = item;
             const subtotal = qty * harga_satuan;
 
             // Check Stock & Get Details
-            const [stockCheck] = await connection.query<RowDataPacket[]>(
-                'SELECT nama_barang, harga_beli, stok FROM barang WHERE barang_id = ? FOR UPDATE',
+            const { rows: stockCheck } = await client.query(
+                'SELECT nama_barang, harga_beli, stok FROM barang WHERE barang_id = $1 FOR UPDATE',
                 [barang_id]
             );
 
@@ -38,47 +41,41 @@ export async function POST(request: Request) {
             }
 
             const { nama_barang, harga_beli, stok } = stockCheck[0];
+            // Convert to number because pg might return decimal/numeric as string
+            const currentStok = parseFloat(stok);
+            const qtyNum = parseFloat(qty);
 
-            if (stok < qty) {
+            if (currentStok < qtyNum) {
                 throw new Error(`Stok tidak cukup untuk ${nama_barang}`);
             }
 
             // Insert Detail with Snapshot
-            await connection.query(
-                'INSERT INTO detail_transaksi (transaksi_id, barang_id, nama_barang, harga_beli, qty, harga_satuan, subtotal) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            await client.query(
+                'INSERT INTO detail_transaksi (transaksi_id, barang_id, nama_barang, harga_beli, qty, harga_satuan, subtotal) VALUES ($1, $2, $3, $4, $5, $6, $7)',
                 [transaksi_id, barang_id, nama_barang, harga_beli, qty, harga_satuan, subtotal]
             );
 
             // Decrease Stock
-            await connection.query(
-                'UPDATE barang SET stok = stok - ? WHERE barang_id = ?',
+            await client.query(
+                'UPDATE barang SET stok = stok - $1 WHERE barang_id = $2',
                 [qty, barang_id]
             );
 
             // Log Stock Out with Snapshot
-            await connection.query(
-                'INSERT INTO stok_log (barang_id, nama_barang, user_id, jenis, jumlah, keterangan) VALUES (?, ?, ?, ?, ?, ?)',
+            await client.query(
+                'INSERT INTO stok_log (barang_id, nama_barang, user_id, jenis, jumlah, keterangan) VALUES ($1, $2, $3, $4, $5, $6)',
                 [barang_id, nama_barang, user_id || null, 'keluar', qty, `Penjualan #${transaksi_id}`]
             );
         }
 
-        await connection.commit();
-        return NextResponse.json({ success: true, transaksi_id }, { status: 201 });
+        await client.query('COMMIT');
+        return NextResponse.json({ success: true, transaksi_id });
 
     } catch (error: any) {
-        await connection.rollback();
-        console.error('Transaction Error:', error);
+        await client.query('ROLLBACK');
+        console.error(error);
         return NextResponse.json({ error: error.message || 'Transaction Failed' }, { status: 500 });
     } finally {
-        connection.release();
-    }
-}
-
-export async function GET(request: Request) {
-    try {
-        const [rows] = await pool.query('SELECT t.*, u.nama as kasir FROM transaksi t LEFT JOIN users u ON t.user_id = u.user_id ORDER BY t.tanggal_transaksi DESC LIMIT 50');
-        return NextResponse.json(rows);
-    } catch (error) {
-        return NextResponse.json({ error: 'Database Error' }, { status: 500 });
+        client.release();
     }
 }

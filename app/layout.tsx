@@ -5,7 +5,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'RPL Kasir Sistem',
+  title: 'WARUNG DIGITAL',
   description: 'Aplikasi Kasir dan Stok Barang',
 };
 

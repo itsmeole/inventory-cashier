@@ -1,21 +1,20 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { RowDataPacket } from 'mysql2';
 
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const period = searchParams.get('period');
 
-        // Common Data: Low Stock        // 5. Get items with low stock (excluding deleted items)
-        const [lowStockRows] = await pool.query<RowDataPacket[]>(
+        // Common Data: Low Stock
+        const { rows: lowStockRows } = await pool.query(
             `SELECT barang_id, nama_barang, stok, stok_minimum 
              FROM barang 
              WHERE stok <= stok_minimum AND is_deleted = 0
              ORDER BY stok ASC LIMIT 5`
         );
 
-        const [logs] = await pool.query<RowDataPacket[]>(`
+        const { rows: logs } = await pool.query(`
             SELECT 
                 l.log_id, l.jenis, l.jumlah, l.tanggal, 
                 COALESCE(l.nama_barang, b.nama_barang, 'Item Terhapus') as nama_barang,
@@ -31,27 +30,26 @@ export async function GET(request: Request) {
         // --- DASHBOARD MODE (No Period Selected) ---
         if (!period) {
             const today = new Date().toISOString().slice(0, 10);
-            const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
 
             // 1. Today's Sales
-            const [todaySales] = await pool.query<RowDataPacket[]>(
-                'SELECT SUM(total_harga) as total FROM transaksi WHERE DATE(tanggal_transaksi) = ?',
+            const { rows: todaySales } = await pool.query(
+                'SELECT SUM(total_harga) as total FROM transaksi WHERE DATE(tanggal_transaksi) = $1',
                 [today]
             );
 
             // 2. Month's Sales
-            const [monthSales] = await pool.query<RowDataPacket[]>(
-                'SELECT SUM(total_harga) as total FROM transaksi WHERE DATE(tanggal_transaksi) >= ?',
-                [firstDayOfMonth]
+            // Postgres date_trunc for month
+            const { rows: monthSales } = await pool.query(
+                "SELECT SUM(total_harga) as total FROM transaksi WHERE date_trunc('month', tanggal_transaksi) = date_trunc('month', CURRENT_DATE)"
             );
 
-            // 3. Today's Profit (Use Snapshot harga_beli if available)
-            const [profit] = await pool.query<RowDataPacket[]>(`
+            // 3. Today's Profit
+            const { rows: profit } = await pool.query(`
                 SELECT SUM((d.subtotal) - (COALESCE(d.harga_beli, b.harga_beli) * d.qty)) as profit 
                 FROM detail_transaksi d 
                 LEFT JOIN barang b ON d.barang_id = b.barang_id 
                 JOIN transaksi t ON d.transaksi_id = t.transaksi_id 
-                WHERE DATE(t.tanggal_transaksi) = ?`,
+                WHERE DATE(t.tanggal_transaksi) = $1`,
                 [today]
             );
 
@@ -69,48 +67,54 @@ export async function GET(request: Request) {
 
         // --- REPORTS PAGE MODE (With Period) ---
         let dateCondition = '';
+        const params: any[] = [];
+        let paramIndex = 1;
+
         switch (period) {
             case 'daily':
-                dateCondition = 'DATE(tanggal_transaksi) = CURDATE()';
+                dateCondition = `DATE(tanggal_transaksi) = CURRENT_DATE`;
                 break;
             case 'weekly':
-                dateCondition = 'YEARWEEK(tanggal_transaksi, 1) = YEARWEEK(CURDATE(), 1)';
+                // ISO week
+                dateCondition = `EXTRACT(WEEK FROM tanggal_transaksi) = EXTRACT(WEEK FROM CURRENT_DATE) AND EXTRACT(YEAR FROM tanggal_transaksi) = EXTRACT(YEAR FROM CURRENT_DATE)`;
                 break;
             case 'monthly':
-                dateCondition = 'MONTH(tanggal_transaksi) = MONTH(CURDATE()) AND YEAR(tanggal_transaksi) = YEAR(CURDATE())';
+                dateCondition = `EXTRACT(MONTH FROM tanggal_transaksi) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM tanggal_transaksi) = EXTRACT(YEAR FROM CURRENT_DATE)`;
                 break;
             case 'custom':
                 if (startDate && endDate) {
-                    dateCondition = `DATE(tanggal_transaksi) BETWEEN '${startDate}' AND '${endDate}'`;
+                    dateCondition = `DATE(tanggal_transaksi) BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
+                    params.push(startDate, endDate);
+                    paramIndex += 2;
                 } else {
-                    dateCondition = 'DATE(tanggal_transaksi) = CURDATE()'; // Fallback
+                    dateCondition = `DATE(tanggal_transaksi) = CURRENT_DATE`;
                 }
                 break;
             default:
-                dateCondition = 'DATE(tanggal_transaksi) = CURDATE()';
+                dateCondition = `DATE(tanggal_transaksi) = CURRENT_DATE`;
         }
 
         // Summary Stats based on period
-        const [statsRows] = await pool.query<RowDataPacket[]>(`
+        const { rows: statsRows } = await pool.query(`
             SELECT 
-                COALESCE(SUM(total_harga), 0) as totalSales,
-                COUNT(transaksi_id) as totalTransactions
+                COALESCE(SUM(total_harga), 0) as "totalSales",
+                COUNT(transaksi_id) as "totalTransactions"
             FROM transaksi 
             WHERE ${dateCondition}
-        `);
+        `, params);
 
-        // Profit based on period (Use Snapshot)
-        const [profitRows] = await pool.query<RowDataPacket[]>(`
+        // Profit based on period
+        const { rows: profitRows } = await pool.query(`
             SELECT 
-                COALESCE(SUM((dt.harga_satuan - COALESCE(dt.harga_beli, b.harga_beli)) * dt.qty), 0) as totalProfit
+                COALESCE(SUM((dt.harga_satuan - COALESCE(dt.harga_beli, b.harga_beli)) * dt.qty), 0) as "totalProfit"
             FROM detail_transaksi dt
             JOIN transaksi t ON dt.transaksi_id = t.transaksi_id
             LEFT JOIN barang b ON dt.barang_id = b.barang_id
             WHERE ${dateCondition.replace(/tanggal_transaksi/g, 't.tanggal_transaksi')}
-        `);
+        `, params);
 
         // Transaction List (Headers)
-        const [transactions] = await pool.query<RowDataPacket[]>(`
+        const { rows: transactions } = await pool.query(`
             SELECT 
                 t.transaksi_id, 
                 t.tanggal_transaksi, 
@@ -121,13 +125,17 @@ export async function GET(request: Request) {
             LEFT JOIN users u ON t.user_id = u.user_id
             WHERE ${dateCondition.replace(/tanggal_transaksi/g, 't.tanggal_transaksi')}
             ORDER BY t.tanggal_transaksi DESC
-        `);
+        `, params);
 
-        // Fetch items for these transactions manually (since JSON_ARRAYAGG is not supported on older MySQL)
         if (transactions.length > 0) {
             const transactionIds = transactions.map((t: any) => t.transaksi_id);
 
-            const [details] = await pool.query<RowDataPacket[]>(`
+            // Postgres supports ANY() for array comparison which is cleaner, but IN (...) works if stringified.
+            // Using ANY($1::int[]) is better but string injection is easier to port from existing code for now.
+            // Let's use IN with parameter generation for safety or just dynamic string if array is small.
+            // For now, simpler to just use dynamic string as before but verify ids are numbers.
+
+            const { rows: details } = await pool.query(`
                 SELECT 
                     dt.transaksi_id,
                     COALESCE(dt.nama_barang, b.nama_barang, 'Item Terhapus') as nama_barang,
@@ -139,7 +147,6 @@ export async function GET(request: Request) {
                 WHERE dt.transaksi_id IN (${transactionIds.join(',')})
             `);
 
-            // Attach items to transactions
             transactions.forEach((t: any) => {
                 const relatedItems = details.filter((d: any) => d.transaksi_id === t.transaksi_id);
                 t.items = relatedItems.map((item: any) => ({
@@ -150,7 +157,6 @@ export async function GET(request: Request) {
                 }));
             });
         } else {
-            // Ensure items is an empty array if no transactions
             transactions.forEach((t: any) => t.items = []);
         }
 

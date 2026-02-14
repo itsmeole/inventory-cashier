@@ -5,30 +5,32 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     try {
         const { id } = await params;
         const body = await request.json();
-        const { username, password, nama, role } = body;
-
-        let query = 'UPDATE users SET username = ?, nama = ?, role = ? WHERE user_id = ?';
-        let values = [username, nama, role, id];
+        const { nama, username, role, password } = body;
 
         if (password && password.trim() !== '') {
-            query = 'UPDATE users SET username = ?, nama = ?, role = ?, password = ? WHERE user_id = ?';
-            values = [username, nama, role, password, id];
+            await pool.query(
+                'UPDATE users SET nama = $1, username = $2, role = $3, password = $4 WHERE user_id = $5',
+                [nama, username, role, password, id]
+            );
+        } else {
+            await pool.query(
+                'UPDATE users SET nama = $1, username = $2, role = $3 WHERE user_id = $4',
+                [nama, username, role, id]
+            );
         }
-
-        await pool.query(query, values);
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        return NextResponse.json({ error: 'Database Error' }, { status: 500 });
+        return NextResponse.json({ error: 'Gagal update user' }, { status: 500 });
     }
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;
-        await pool.query('DELETE FROM users WHERE user_id = ?', [id]);
+        await pool.query('DELETE FROM users WHERE user_id = $1', [id]);
         return NextResponse.json({ success: true });
     } catch (error) {
-        return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+        return NextResponse.json({ error: 'Gagal hapus user' }, { status: 500 });
     }
 }

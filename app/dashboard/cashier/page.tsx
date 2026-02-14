@@ -21,7 +21,7 @@ export default function CashierPage() {
         if (userStr) {
             const user = JSON.parse(userStr);
             setCashierName(user.nama || 'Kasir');
-            if (user.role !== 'karyawan') {
+            if (user.role !== 'kasir') {
                 Swal.fire('Akses Ditolak', 'Halaman ini hanya untuk Kasir.', 'error').then(() => {
                     router.push('/dashboard');
                 });

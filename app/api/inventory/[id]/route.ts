@@ -18,12 +18,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         const file = formData.get('image') as File | null;
 
         // Get old stock first for logging
-        const [oldItem] = await pool.query<any[]>('SELECT stok FROM barang WHERE barang_id = ?', [id]);
+        const { rows: oldItem } = await pool.query('SELECT stok FROM barang WHERE barang_id = $1', [id]);
         const oldStok = oldItem[0]?.stok || 0;
         const diff = stok - oldStok;
 
-        let query = 'UPDATE barang SET nama_barang = ?, harga_beli = ?, harga_jual = ?, stok = ?, stok_minimum = ?, satuan = ?';
+        let query = 'UPDATE barang SET nama_barang = $1, harga_beli = $2, harga_jual = $3, stok = $4, stok_minimum = $5, satuan = $6';
         const queryParams: any[] = [nama_barang, harga_beli, harga_jual, stok, stok_minimum, satuan];
+        let paramIndex = 7;
 
         if (file) {
             const bytes = await file.arrayBuffer();
@@ -33,18 +34,19 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             const savePath = path.join(uploadDir, filename);
             await writeFile(savePath, buffer);
 
-            query += ', gambar = ?';
+            query += `, gambar = $${paramIndex}`;
             queryParams.push(`/uploads/${filename}`);
+            paramIndex++;
         }
 
-        query += ' WHERE barang_id = ?';
+        query += ` WHERE barang_id = $${paramIndex}`;
         queryParams.push(id);
 
         await pool.query(query, queryParams);
 
         if (diff !== 0) {
             await pool.query(
-                'INSERT INTO stok_log (barang_id, nama_barang, user_id, jenis, jumlah, keterangan) VALUES (?, ?, ?, ?, ?, ?)',
+                'INSERT INTO stok_log (barang_id, nama_barang, user_id, jenis, jumlah, keterangan) VALUES ($1, $2, $3, $4, $5, $6)',
                 [id, nama_barang, user_id, diff > 0 ? 'masuk' : 'penyesuaian', Math.abs(diff), 'Edit Manual']
             );
         }
@@ -61,8 +63,18 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
         const { id } = await params;
 
         // Attempt Hard Delete (Constraints updated to SET NULL)
-        await pool.query('DELETE FROM barang WHERE barang_id = ?', [id]);
-        return NextResponse.json({ success: true });
+        try {
+            await pool.query('DELETE FROM barang WHERE barang_id = $1', [id]);
+            return NextResponse.json({ success: true });
+        } catch (dbError: any) {
+            // Postgres foreign key violation is code '23503'
+            if (dbError.code === '23503') {
+                return NextResponse.json({
+                    error: 'Barang tidak dapat dihapus permanen karena memiliki riwayat transaksi atau stok log.'
+                }, { status: 409 });
+            }
+            throw dbError;
+        }
 
     } catch (error) {
         console.error('Delete Error:', error);
