@@ -58,6 +58,23 @@ export default function UsersPage() {
             body: JSON.stringify(formData)
         });
 
+        // Update localStorage if the admin is editing their own profile
+        if (editingUser) {
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                const currentUser = JSON.parse(userStr);
+                if (currentUser.user_id === editingUser.user_id) {
+                    const updatedUser = { 
+                        ...currentUser, 
+                        nama: formData.nama, 
+                        username: formData.username,
+                        role: formData.role 
+                    };
+                    localStorage.setItem('user', JSON.stringify(updatedUser));
+                }
+            }
+        }
+
         setShowModal(false);
         setEditingUser(null);
         setFormData({ username: '', password: '', nama: '', role: 'kasir' });

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import { BarChart3, Calendar, DollarSign, TrendingUp, Filter, Printer } from 'lucide-react';
+import { BarChart3, Calendar, DollarSign, TrendingUp, TrendingDown, Filter, Printer } from 'lucide-react';
 
 export default function ReportsPage() {
     const [filter, setFilter] = useState('daily'); // daily, weekly, monthly, custom
@@ -139,6 +139,28 @@ export default function ReportsPage() {
         custom: 'Rentang Waktu'
     };
 
+    const getTrendProps = (current: any, previous: any) => {
+        const curr = parseFloat(current || 0);
+        const prev = parseFloat(previous || 0);
+        const diff = curr - prev;
+        const trend = prev === 0 ? (curr > 0 ? 100 : 0) : ((diff / prev) * 100);
+        const isUp = diff >= 0;
+        return {
+            trendNum: Math.abs(trend).toFixed(1) + '%',
+            isUp
+        };
+    };
+
+    const getSubtitle = () => {
+        switch(filter) {
+            case 'daily': return 'vs kemarin';
+            case 'weekly': return 'vs minggu lalu';
+            case 'monthly': return 'vs bulan lalu';
+            case 'custom': return 'vs periode sblmnya';
+            default: return '';
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -204,18 +226,27 @@ export default function ReportsPage() {
                             value={`Rp ${parseInt(data?.summary?.totalSales || 0).toLocaleString('id-ID')}`}
                             icon={DollarSign}
                             color="bg-blue-500"
+                            trend={data ? getTrendProps(data.summary.totalSales, data.summary.prevTotalSales).trendNum : null}
+                            isUp={data ? getTrendProps(data.summary.totalSales, data.summary.prevTotalSales).isUp : null}
+                            subtitle={getSubtitle()}
                         />
                         <StatsCard
                             title={`Keuntungan ${periodLabels[filter]}`}
                             value={`Rp ${parseInt(data?.summary?.totalProfit || 0).toLocaleString('id-ID')}`}
                             icon={TrendingUp}
                             color="bg-emerald-500"
+                            trend={data ? getTrendProps(data.summary.totalProfit, data.summary.prevTotalProfit).trendNum : null}
+                            isUp={data ? getTrendProps(data.summary.totalProfit, data.summary.prevTotalProfit).isUp : null}
+                            subtitle={getSubtitle()}
                         />
                         <StatsCard
                             title={`Total Transaksi`}
-                            value={`${data?.summary?.totalTransactions} Transaksi`}
+                            value={`${data?.summary?.totalTransactions || 0} Transaksi`}
                             icon={Calendar}
                             color="bg-purple-500"
+                            trend={data ? getTrendProps(data.summary.totalTransactions, data.summary.prevTotalTransactions).trendNum : null}
+                            isUp={data ? getTrendProps(data.summary.totalTransactions, data.summary.prevTotalTransactions).isUp : null}
+                            subtitle={getSubtitle()}
                         />
                     </div>
 
@@ -276,15 +307,23 @@ export default function ReportsPage() {
     );
 }
 
-function StatsCard({ title, value, icon: Icon, color }: any) {
+function StatsCard({ title, value, icon: Icon, color, trend, isUp, subtitle }: any) {
     return (
         <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm transition-transform hover:-translate-y-1">
             <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-sm font-medium text-slate-600">{title}</p>
-                    <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
+                <div className="flex-1">
+                    <p className="text-sm font-medium text-slate-600 mb-1">{title}</p>
+                    <p className="text-2xl font-bold text-slate-900">{value}</p>
+                    {trend && (
+                        <p className="mt-2 flex items-center gap-1 text-xs">
+                            <span className={`font-semibold flex items-center gap-0.5 px-1.5 py-0.5 rounded-full ${isUp ? 'text-emerald-700 bg-emerald-100' : 'text-red-700 bg-red-100'}`}>
+                                {isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />} {trend}
+                            </span>
+                            <span className="text-slate-400 ml-1">{subtitle}</span>
+                        </p>
+                    )}
                 </div>
-                <div className={`rounded-lg p-3 text-white ${color}`}>
+                <div className={`rounded-lg p-3 text-white ${color} ml-4`}>
                     <Icon size={24} />
                 </div>
             </div>

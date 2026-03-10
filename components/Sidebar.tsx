@@ -79,24 +79,24 @@ export default function Sidebar() {
 
             {/* Sidebar Container */}
             <div className={`
-                fixed inset-y-0 left-0 z-50 flex h-full flex-col bg-slate-900 text-white shadow-xl transition-all duration-300
-                ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} 
+                fixed inset-y-0 left-0 z-50 flex h-full flex-col bg-[#0F172A] text-white transition-all duration-300
+                ${isMobileOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64'} 
                 md:relative md:translate-x-0 
-                ${isCollapsed ? 'md:w-20' : 'md:w-64'} 
-                w-64
+                ${isCollapsed ? 'md:w-[80px]' : 'md:w-[260px]'} 
+                md:rounded-2xl md:h-[calc(100vh-24px)] md:shadow-xl shrink-0
             `}>
-                <div className={`flex h-20 items-center border-b border-slate-800 ${isCollapsed ? 'md:justify-center' : 'justify-between px-4'}`}>
+                <div className={`flex items-center min-h-[80px] border-b border-white/5 ${isCollapsed ? 'md:justify-center' : 'justify-between px-6'}`}>
                     {(!isCollapsed || isMobileOpen) && (
                         <div className="flex flex-col">
-                            <h1 className="text-xl font-bold tracking-wider text-blue-400">WARDIG</h1>
-                            <span className="text-[10px] text-slate-400 font-normal tracking-[0.2em] uppercase">Warung Digital</span>
+                            <h1 className="text-xl font-bold tracking-wider text-blue-500">WARDIG</h1>
+                            <span className="text-[10px] text-slate-400 font-medium tracking-[0.2em] uppercase">Warung Digital</span>
                         </div>
                     )}
 
                     {/* Desktop Collapse Button */}
                     <button
                         onClick={() => setIsCollapsed(!isCollapsed)}
-                        className="hidden rounded-lg p-1.5 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors md:block"
+                        className="hidden rounded-lg p-1.5 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors md:block"
                     >
                         {isCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
                     </button>
@@ -110,7 +110,7 @@ export default function Sidebar() {
                     </button>
                 </div>
 
-                <nav className="flex-1 space-y-2 p-3">
+                <nav className="flex-1 space-y-2 p-4">
                     {links.map((link) => {
                         const Icon = link.icon;
                         const isActive = pathname === link.href;
@@ -119,10 +119,10 @@ export default function Sidebar() {
                                 key={link.href}
                                 href={link.href}
                                 title={isCollapsed ? link.name : ''}
-                                className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors ${isActive
+                                className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${isActive
                                     ? 'bg-blue-600 text-white shadow-md'
-                                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                                    } ${isCollapsed ? 'md:justify-center' : ''}`}
+                                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                                    } ${isCollapsed ? 'md:justify-center px-0' : ''}`}
                             >
                                 <Icon size={20} />
                                 {(!isCollapsed || isMobileOpen) && <span>{link.name}</span>}
@@ -131,11 +131,11 @@ export default function Sidebar() {
                     })}
                 </nav>
 
-                <div className="border-t border-slate-800 p-3">
+                <div className="border-t border-white/5 p-4">
                     <button
                         onClick={handleLogout}
                         title={isCollapsed ? 'Keluar' : ''}
-                        className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-red-400 hover:bg-red-950/30 transition-colors ${isCollapsed ? 'md:justify-center' : ''}`}
+                        className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors ${isCollapsed ? 'md:justify-center px-0' : ''}`}
                     >
                         <LogOut size={20} />
                         {(!isCollapsed || isMobileOpen) && <span>Keluar</span>}

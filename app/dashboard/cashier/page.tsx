@@ -140,6 +140,8 @@ export default function CashierPage() {
             const payload = {
                 user_id: user.user_id,
                 total_harga: grandTotal,
+                bayar: bayar,
+                kembalian: kembali,
                 metode_pembayaran: 'Tunai',
                 items: cart.map(item => ({
                     barang_id: item.barang_id,
