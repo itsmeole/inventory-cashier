@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, X, UserCog } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
+import { fetchWithAuth } from '@/lib/fetcher';
 
 export default function UsersPage() {
     const [users, setUsers] = useState<any[]>([]);
@@ -39,7 +40,7 @@ export default function UsersPage() {
     }, []);
 
     const fetchUsers = () => {
-        fetch('/api/users')
+        fetchWithAuth('/api/users')
             .then(res => res.json())
             .then(data => {
                 setUsers(data);
@@ -52,7 +53,7 @@ export default function UsersPage() {
         const url = editingUser ? `/api/users/${editingUser.user_id}` : '/api/users';
         const method = editingUser ? 'PUT' : 'POST';
 
-        await fetch(url, {
+        await fetchWithAuth(url, {
             method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
@@ -104,7 +105,7 @@ export default function UsersPage() {
         });
 
         if (result.isConfirmed) {
-            await fetch(`/api/users/${id}`, { method: 'DELETE' });
+            await fetchWithAuth(`/api/users/${id}`, { method: 'DELETE' });
             fetchUsers();
             Swal.fire('Terhapus', 'User berhasil dihapus.', 'success');
         }

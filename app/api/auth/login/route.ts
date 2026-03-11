@@ -10,7 +10,7 @@ export async function POST(request: Request) {
         }
 
         const { rows } = await pool.query(
-            'SELECT user_id, username, nama, role, password FROM users WHERE username = $1',
+            'SELECT user_id, store_id, username, nama, role, password FROM users WHERE username = $1',
             [username]
         );
 

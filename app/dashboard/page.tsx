@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { DollarSign, Package, AlertTriangle, TrendingUp, TrendingDown, RefreshCw, User } from 'lucide-react';
+import { fetchWithAuth } from '@/lib/fetcher';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
 
 export default function DashboardPage() {
@@ -18,7 +19,7 @@ export default function DashboardPage() {
             } catch (e) { }
         }
 
-        fetch('/api/reports')
+        fetchWithAuth('/api/reports')
             .then((res) => res.json())
             .then((data) => {
                 setStats(data);
@@ -48,7 +49,10 @@ export default function DashboardPage() {
         <div className="space-y-6 pb-10">
             <div className="flex flex-row items-center justify-between gap-2">
                 <h2 className="text-xl md:text-2xl font-bold text-slate-800">Dashboard Overview</h2>
-                <div className="hidden md:flex flex-row items-center gap-2">
+                <div 
+                    onClick={() => window.dispatchEvent(new Event('openUserProfileModal'))}
+                    className="hidden md:flex flex-row items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                >
                     <span className="font-semibold text-slate-800 text-xs md:text-sm">Hallo, {userName}</span>
                     <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white border border-slate-200 flex justify-center items-center shadow-sm">
                         <User size={18} className="text-slate-600 md:w-5 md:h-5" />

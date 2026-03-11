@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const { rows } = await pool.query('SELECT user_id, nama, username, role, created_at FROM users ORDER BY created_at DESC');
+        const store_id = request.headers.get('x-store-id');
+        if (!store_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const { rows } = await pool.query('SELECT user_id, nama, username, role, created_at FROM users WHERE store_id = $1 ORDER BY created_at DESC', [store_id]);
         return NextResponse.json(rows);
     } catch (error) {
         return NextResponse.json({ error: 'Database Error' }, { status: 500 });
@@ -12,6 +15,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
+        const store_id = request.headers.get('x-store-id');
+        if (!store_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
         const body = await request.json();
         const { nama, username, password, role } = body;
 
@@ -22,8 +28,8 @@ export async function POST(request: Request) {
         }
 
         const { rows: result } = await pool.query(
-            'INSERT INTO users (nama, username, password, role) VALUES ($1, $2, $3, $4) RETURNING user_id',
-            [nama, username, password, role]
+            'INSERT INTO users (nama, username, password, role, store_id) VALUES ($1, $2, $3, $4, $5) RETURNING user_id',
+            [nama, username, password, role, store_id]
         );
 
         return NextResponse.json({ success: true, id: result[0].user_id }, { status: 201 });

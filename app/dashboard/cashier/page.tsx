@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Printer } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
+import { fetchWithAuth } from '@/lib/fetcher';
 
 export default function CashierPage() {
     const [products, setProducts] = useState<any[]>([]);
@@ -14,6 +15,7 @@ export default function CashierPage() {
     const router = useRouter();
 
     const [cashierName, setCashierName] = useState('');
+    const [storeSettings, setStoreSettings] = useState<any>(null);
 
     useEffect(() => {
         // Role Check
@@ -31,11 +33,17 @@ export default function CashierPage() {
             router.push('/');
         }
 
-        fetch('/api/inventory')
+        fetchWithAuth('/api/inventory')
             .then(res => res.json())
             .then(data => {
                 setProducts(data);
                 setLoading(false);
+            });
+
+        fetchWithAuth('/api/store-settings')
+            .then(res => res.json())
+            .then(data => {
+                setStoreSettings(data);
             });
     }, []);
 
@@ -150,7 +158,7 @@ export default function CashierPage() {
                 }))
             };
 
-            const res = await fetch('/api/transactions', {
+            const res = await fetchWithAuth('/api/transactions', {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });
@@ -180,7 +188,7 @@ export default function CashierPage() {
                     }
                     // Reset cart and refresh stock
                     setCart([]);
-                    fetch('/api/inventory').then(r => r.json()).then(setProducts);
+                    fetchWithAuth('/api/inventory').then(r => r.json()).then(setProducts);
                 });
             } else {
                 Swal.fire('Gagal', data.error || 'Terjadi kesalahan saat memproses transaksi.', 'error');
@@ -215,10 +223,10 @@ export default function CashierPage() {
                 </head>
                 <body>
                     <div class="header">
-                        <h2 style="margin:0">WARDIG</h2>
-                        <p style="margin:0; font-size: 10px; font-weight: normal;">warung digital</p>
-                        <p style="margin:5px 0 0 0">Gang lurah Kp Mekarsari RT 04/ RW 02</p>
-                        <p style="margin:0 0 5px 0">Kec Bungursari Kab Purwakarta</p>
+                        <h2 style="margin:0">${storeSettings?.nama_toko?.split('-')[0] || 'WARDIG'}</h2>
+                        <p style="margin:0; font-size: 10px; font-weight: normal;">${storeSettings?.nama_toko?.split('-')[1] || 'warung digital'}</p>
+                        <p style="margin:5px 0 0 0">${storeSettings?.jalan || ''} ${storeSettings?.rt_rw || ''}</p>
+                        <p style="margin:0 0 5px 0">${storeSettings?.kecamatan || ''} ${storeSettings?.kabupaten || ''}</p>
                         <p style="margin:0">#${transaksiId} | ${date}</p>
                     </div>
                     <div>

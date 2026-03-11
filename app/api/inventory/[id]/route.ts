@@ -5,6 +5,9 @@ import path from 'path';
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
+        const store_id = request.headers.get('x-store-id');
+        if (!store_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
         const { id } = await params;
         const formData = await request.formData();
 
@@ -17,8 +20,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         const user_id = formData.get('user_id') ? parseInt(formData.get('user_id') as string) : null;
         const file = formData.get('image') as File | null;
 
-        // Get old stock first for logging
-        const { rows: oldItem } = await pool.query('SELECT stok FROM barang WHERE barang_id = $1', [id]);
+        // Get old stock first for logging and ensure it belongs to the store
+        const { rows: oldItem } = await pool.query('SELECT stok FROM barang WHERE barang_id = $1 AND store_id = $2', [id, store_id]);
+        if (oldItem.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
         const oldStok = oldItem[0]?.stok || 0;
         const diff = stok - oldStok;
 
@@ -39,15 +44,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             paramIndex++;
         }
 
-        query += ` WHERE barang_id = $${paramIndex}`;
-        queryParams.push(id);
+        query += ` WHERE barang_id = $${paramIndex} AND store_id = $${paramIndex + 1}`;
+        queryParams.push(id, store_id);
 
         await pool.query(query, queryParams);
 
         if (diff !== 0) {
             await pool.query(
-                'INSERT INTO stok_log (barang_id, nama_barang, user_id, jenis, jumlah, keterangan) VALUES ($1, $2, $3, $4, $5, $6)',
-                [id, nama_barang, user_id, diff > 0 ? 'masuk' : 'penyesuaian', Math.abs(diff), 'Edit Manual']
+                'INSERT INTO stok_log (barang_id, nama_barang, user_id, jenis, jumlah, keterangan, store_id) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                [id, nama_barang, user_id, diff > 0 ? 'masuk' : 'penyesuaian', Math.abs(diff), 'Edit Manual', store_id]
             );
         }
 
@@ -60,11 +65,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
+        const store_id = request.headers.get('x-store-id');
+        if (!store_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
         const { id } = await params;
 
         // Attempt Hard Delete (Constraints updated to SET NULL)
         try {
-            await pool.query('DELETE FROM barang WHERE barang_id = $1', [id]);
+            const { rowCount } = await pool.query('DELETE FROM barang WHERE barang_id = $1 AND store_id = $2', [id, store_id]);
+            if (rowCount === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 });
             return NextResponse.json({ success: true });
         } catch (dbError: any) {
             // Postgres foreign key violation is code '23503'

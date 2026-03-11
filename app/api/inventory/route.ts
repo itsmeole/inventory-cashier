@@ -5,12 +5,15 @@ import path from 'path';
 
 export async function GET(request: Request) {
     try {
+        const store_id = request.headers.get('x-store-id');
+        if (!store_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
         const { searchParams } = new URL(request.url);
         const search = searchParams.get('search') || '';
 
-        let query = 'SELECT * FROM barang WHERE is_deleted = 0';
-        const params: any[] = [];
-        let paramIndex = 1;
+        let query = 'SELECT * FROM barang WHERE is_deleted = 0 AND store_id = $1';
+        const params: any[] = [store_id];
+        let paramIndex = 2;
 
         if (search) {
             query += ` AND nama_barang ILIKE $${paramIndex}`;
@@ -30,6 +33,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
+        const store_id = request.headers.get('x-store-id');
+        if (!store_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
         const formData = await request.formData();
         const nama_barang = formData.get('nama_barang') as string;
         const harga_beli = parseFloat(formData.get('harga_beli') as string);
@@ -55,8 +61,8 @@ export async function POST(request: Request) {
         }
 
         const { rows: result } = await pool.query(
-            'INSERT INTO barang (nama_barang, harga_beli, harga_jual, stok, stok_minimum, satuan, gambar, is_deleted) VALUES ($1, $2, $3, $4, $5, $6, $7, 0) RETURNING barang_id',
-            [nama_barang, harga_beli, harga_jual, stok, stok_minimum, satuan, gambar]
+            'INSERT INTO barang (nama_barang, harga_beli, harga_jual, stok, stok_minimum, satuan, gambar, is_deleted, store_id) VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8) RETURNING barang_id',
+            [nama_barang, harga_beli, harga_jual, stok, stok_minimum, satuan, gambar, store_id]
         );
 
         const newId = result[0].barang_id;
@@ -64,8 +70,8 @@ export async function POST(request: Request) {
         // Record Log
         if (stok > 0) {
             await pool.query(
-                'INSERT INTO stok_log (barang_id, nama_barang, user_id, jenis, jumlah, keterangan) VALUES ($1, $2, $3, $4, $5, $6)',
-                [newId, nama_barang, user_id, 'masuk', stok, 'Stok Awal']
+                'INSERT INTO stok_log (barang_id, nama_barang, user_id, jenis, jumlah, keterangan, store_id) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                [newId, nama_barang, user_id, 'masuk', stok, 'Stok Awal', store_id]
             );
         }
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, X } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { fetchWithAuth } from '@/lib/fetcher';
 
 export default function InventoryPage() {
     const [items, setItems] = useState<any[]>([]);
@@ -24,7 +25,7 @@ export default function InventoryPage() {
     });
 
     const fetchItems = () => {
-        fetch('/api/inventory?search=' + searchTerm)
+        fetchWithAuth('/api/inventory?search=' + searchTerm)
             .then(res => res.json())
             .then(data => {
                 setItems(data);
@@ -180,8 +181,8 @@ export default function InventoryPage() {
                                         )}
                                     </td>
                                     <td className="px-6 py-4 font-medium text-slate-900">{item.nama_barang}</td>
-                                    <td className="px-6 py-4">Rp {item.harga_beli.toLocaleString('id-ID')}</td>
-                                    <td className="px-6 py-4 font-bold text-green-600">Rp {item.harga_jual.toLocaleString('id-ID')}</td>
+                                    <td className="px-6 py-4">Rp {parseInt(item.harga_beli).toLocaleString('id-ID')}</td>
+                                    <td className="px-6 py-4 font-bold text-green-600">Rp {parseInt(item.harga_jual).toLocaleString('id-ID')}</td>
                                     <td className="px-6 py-4">
                                         <span className={`rounded-full px-2 py-1 text-xs font-medium ${parseFloat(item.stok) <= parseFloat(item.stok_minimum) ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
                                             {item.stok}

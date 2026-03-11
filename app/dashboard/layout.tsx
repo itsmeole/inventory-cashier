@@ -1,4 +1,5 @@
 import Sidebar from '@/components/Sidebar';
+import UserProfileModal from '@/components/UserProfileModal';
 
 export default function DashboardLayout({
     children,
@@ -19,6 +20,8 @@ export default function DashboardLayout({
                     {children}
                 </div>
             </main>
+
+            <UserProfileModal />
         </div>
     );
 }

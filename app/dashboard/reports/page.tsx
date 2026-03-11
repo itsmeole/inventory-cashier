@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { BarChart3, Calendar, DollarSign, TrendingUp, TrendingDown, Filter, Printer } from 'lucide-react';
+import { fetchWithAuth } from '@/lib/fetcher';
 
 export default function ReportsPage() {
     const [filter, setFilter] = useState('daily'); // daily, weekly, monthly, custom
@@ -41,7 +42,7 @@ export default function ReportsPage() {
             url += `&startDate=${startDate}&endDate=${endDate}`;
         }
 
-        fetch(url)
+        fetchWithAuth(url)
             .then(res => res.json())
             .then(data => {
                 setData(data);

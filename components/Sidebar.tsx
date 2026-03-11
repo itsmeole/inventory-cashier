@@ -71,7 +71,10 @@ export default function Sidebar() {
                 </div>
                 {/* User Greeting on Mobile Topbar */}
                 {userName && (
-                    <div className="flex items-center gap-2">
+                    <div 
+                        onClick={() => window.dispatchEvent(new Event('openUserProfileModal'))}
+                        className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                    >
                         <span className="text-xs font-semibold text-slate-300">Hallo, {userName}</span>
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 border border-slate-700">
                             <User size={16} className="text-slate-400" />
