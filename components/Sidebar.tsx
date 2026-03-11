@@ -8,6 +8,7 @@ import Swal from 'sweetalert2';
 
 export default function Sidebar() {
     const [role, setRole] = useState<string>('');
+    const [userName, setUserName] = useState<string>('');
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
 
@@ -16,6 +17,7 @@ export default function Sidebar() {
         if (userStr) {
             const user = JSON.parse(userStr);
             setRole(user.role || '');
+            setUserName(user.nama || '');
         }
     }, []);
 
@@ -67,6 +69,15 @@ export default function Sidebar() {
                     </button>
                     <span className="text-lg font-bold tracking-wider text-blue-400">WARDIG</span>
                 </div>
+                {/* User Greeting on Mobile Topbar */}
+                {userName && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-300">Hallo, {userName}</span>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 border border-slate-700">
+                            <User size={16} className="text-slate-400" />
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Mobile Backdrop */}

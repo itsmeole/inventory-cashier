@@ -46,33 +46,33 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-6 pb-10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h2 className="text-2xl font-bold text-slate-800">Dashboard Overview</h2>
-                <div className="flex items-center gap-3">
-                    <span className="font-semibold text-slate-800 text-sm">Hallo, {userName}</span>
-                    <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex justify-center items-center shadow-sm">
-                        <User size={20} className="text-slate-600" />
+            <div className="flex flex-row items-center justify-between gap-2">
+                <h2 className="text-xl md:text-2xl font-bold text-slate-800">Dashboard Overview</h2>
+                <div className="hidden md:flex flex-row items-center gap-2">
+                    <span className="font-semibold text-slate-800 text-xs md:text-sm">Hallo, {userName}</span>
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white border border-slate-200 flex justify-center items-center shadow-sm">
+                        <User size={18} className="text-slate-600 md:w-5 md:h-5" />
                     </div>
                 </div>
             </div>
 
             {/* Banner Section */}
-            <div className="relative overflow-hidden rounded-2xl bg-[#0F172A] px-10 py-10 shadow-sm flex items-center justify-between">
-                <div className="relative z-10 max-w-lg text-white">
-                    <h3 className="text-3xl font-bold mb-2">
-                        WARDIG <span className="text-slate-400 text-2xl font-normal">- Warung Digital</span>
+            <div className="relative overflow-hidden rounded-2xl bg-[#0F172A] px-6 py-6 md:px-10 md:py-10 shadow-sm flex flex-row md:flex-row items-center justify-between gap-6 md:gap-0">
+                <div className="relative z-10 w-full md:max-w-lg text-white">
+                    <h3 className="text-xl md:text-3xl font-bold mb-1  md:mb-2">
+                        WARDIG <span className="block md:inline text-slate-400 text-lg md:text-2xl font-normal">Warung Digital</span>
                     </h3>
-                    <p className="text-xl text-slate-300 leading-relaxed font-medium">
+                    <p className="text-xs md:text-xl text-slate-300 md:leading-relaxed font-medium">
                         Solusi cerdas karya anak<br />
                         bangsa untuk UMKM naik level
                     </p>
                 </div>
                 {/* Image decoration */}
-                <div className="absolute right-8 bottom-0 top-4 w-1/2 flex justify-end">
+                <div className="relative md:absolute md:right-8 md:bottom-0 md:top-4 w-full md:w-1/2 flex justify-end md:justify-end mt-2 md:mt-0">
                     <img 
                         src="/object.png" 
                         alt="Decoration" 
-                        className="h-40 w-auto object-contain object-left md:mr-0 drop-shadow-2xl"
+                        className="h-25 md:h-40 w-auto object-contain object-center md:object-left md:mr-0 drop-shadow-2xl"
                     />
                 </div>
             </div>
@@ -124,15 +124,15 @@ export default function DashboardPage() {
                         <h3 className="font-semibold text-slate-800">Produk dengan penjualan terbanyak</h3>
                     </div>
                     <div className="p-4 flex-1 overflow-x-auto">
-                        <table className="w-full text-left text-sm">
+                        <table className="w-full text-left text-sm min-w-[500px]">
                             <thead className="text-slate-500 border-b border-slate-100">
                                 <tr>
-                                    <th className="pb-2 font-medium">#</th>
-                                    <th className="pb-2 font-medium">Foto Produk</th>
-                                    <th className="pb-2 font-medium">Nama Produk</th>
-                                    <th className="pb-2 font-medium">Harga Produk</th>
-                                    <th className="pb-2 font-medium text-center">Unit Terjual</th>
-                                    <th className="pb-2 font-medium text-right">Keuntungan</th>
+                                    <th className="pb-2 font-medium px-2">#</th>
+                                    <th className="pb-2 font-medium px-2">Foto Produk</th>
+                                    <th className="pb-2 font-medium px-2">Nama Produk</th>
+                                    <th className="pb-2 font-medium px-2">Harga Produk</th>
+                                    <th className="pb-2 font-medium text-center px-2">Unit Terjual</th>
+                                    <th className="pb-2 font-medium text-right px-2">Keuntungan</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
@@ -141,8 +141,8 @@ export default function DashboardPage() {
                                 ) : (
                                     stats?.topProducts?.map((product: any, idx: number) => (
                                         <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                            <td className="py-3 text-slate-600 font-medium">{idx + 1}.</td>
-                                            <td className="py-3">
+                                            <td className="py-3 text-slate-600 font-medium px-2">{idx + 1}.</td>
+                                            <td className="py-3 px-2">
                                                 <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
                                                     {product.gambar ? (
                                                         <img src={product.gambar} alt={product.nama_barang} className="w-full h-full object-cover" />
@@ -151,10 +151,10 @@ export default function DashboardPage() {
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="py-3 font-semibold text-slate-800">{product.nama_barang}</td>
-                                            <td className="py-3 text-slate-600">Rp {parseInt(product.harga_satuan).toLocaleString('id-ID')}</td>
-                                            <td className="py-3 text-center font-bold text-slate-700">{Math.round(product.total_qty || 0)}</td>
-                                            <td className="py-3 text-right text-emerald-600 font-semibold">Rp {parseInt(product.total_profit).toLocaleString('id-ID')}</td>
+                                            <td className="py-3 font-semibold text-slate-800 px-2">{product.nama_barang}</td>
+                                            <td className="py-3 text-slate-600 px-2 whitespace-nowrap">Rp {parseInt(product.harga_satuan).toLocaleString('id-ID')}</td>
+                                            <td className="py-3 text-center font-bold text-slate-700 px-2">{Math.round(product.total_qty || 0)}</td>
+                                            <td className="py-3 text-right text-emerald-600 font-semibold px-2 whitespace-nowrap">Rp {parseInt(product.total_profit).toLocaleString('id-ID')}</td>
                                         </tr>
                                     ))
                                 )}
@@ -167,10 +167,10 @@ export default function DashboardPage() {
 
 
             {/* Charts Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[400px]">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
                 {/* Bar Chart: Pembelian vs penjualan */}
-                <div className="rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col">
+                <div className="rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col h-[350px] md:h-[400px]">
                     <div className="px-6 py-4 border-b border-slate-100">
                         <h3 className="font-semibold text-slate-800">Pembelian vs penjualan</h3>
                     </div>
@@ -190,7 +190,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Line/Area Chart: Sales Overview */}
-                <div className="rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col">
+                <div className="rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col h-[350px] md:h-[400px]">
                     <div className="px-6 py-4 border-b border-slate-100">
                         <h3 className="font-semibold text-slate-800">Sales Overview</h3>
                     </div>
