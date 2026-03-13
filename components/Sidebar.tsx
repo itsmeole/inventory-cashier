@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Package, ShoppingCart, BarChart3, LogOut, User, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import { Home, Package, ShoppingCart, BarChart3, LogOut, User, ChevronLeft, ChevronRight, Menu, MessageCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function Sidebar() {
@@ -31,10 +31,11 @@ export default function Sidebar() {
     const links = [
         { name: 'Dashboard', href: '/dashboard', icon: Home },
         { name: 'Stok Barang', href: '/dashboard/inventory', icon: Package },
-        ...(role === 'kasir' ? [{ name: 'Kasir', href: '/dashboard/cashier', icon: ShoppingCart }] : []),
+        ...(role === 'kasir' ? [{ name: 'Kasir', href: '/dashboard/cashier', icon: ShoppingCart }, { name: 'AI Advisor', href: '/dashboard/chatbot', icon: MessageCircle }] : []),
         ...(role === 'admin' ? [
             { name: 'Laporan', href: '/dashboard/reports', icon: BarChart3 },
-            { name: 'Kelola User', href: '/dashboard/users', icon: User }
+            { name: 'Kelola User', href: '/dashboard/users', icon: User },
+            { name: 'AI Advisor', href: '/dashboard/chatbot', icon: MessageCircle },
         ] : []),
     ];
 
