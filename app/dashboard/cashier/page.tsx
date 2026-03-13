@@ -252,7 +252,7 @@ export default function CashierPage() {
                     <div class="footer">
                         <p>KASIR: ${cashierName.toUpperCase()}</p>
                         <p>Terima Kasih</p>
-                        <p class="no-print" style="margin-top:10px; font-style:italic; font-weight:bold;">* Pilih 'Save as PDF' pada dialog print untuk menyimpan struk digital.</p>
+                        <p class="no-print" style="margin-top:10px; font-style:italic; font-weight:bold;">Terimakasih telah mempercayai transaksi anda kepada kami.</p>
                     </div>
                     <script>
                         window.print();

@@ -45,9 +45,13 @@ export async function POST(request: Request) {
         const satuan = formData.get('satuan') as string;
         const user_id = formData.get('user_id') ? parseInt(formData.get('user_id') as string) : null;
         const file = formData.get('image') as File | null;
+        // Extraction for stok log
+        const info_satuan_beli = formData.get('info_satuan_beli') as string || 'Pcs';
+        const info_jumlah_beli = parseFloat(formData.get('info_jumlah_beli') as string) || stok;
 
         if (!nama_barang || isNaN(harga_beli) || isNaN(harga_jual)) {
-            return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 });
+            console.error('Data tidak lengkap/valid:', { nama_barang, harga_beliRaw: formData.get('harga_beli'), harga_beli, harga_jualRaw: formData.get('harga_jual'), harga_jual });
+            return NextResponse.json({ error: 'Data tidak lengkap. Harga Beli: ' + harga_beli + ' Harga Jual: ' + harga_jual }, { status: 400 });
         }
 
         let gambar = null;
@@ -69,9 +73,14 @@ export async function POST(request: Request) {
 
         // Record Log
         if (stok > 0) {
+            let initialLogDesc = 'Stok Awal';
+            if (['Box', 'Pak'].includes(info_satuan_beli) || info_satuan_beli !== satuan) {
+                initialLogDesc += ` (${info_jumlah_beli} ${info_satuan_beli})`;
+            }
+
             await pool.query(
                 'INSERT INTO stok_log (barang_id, nama_barang, user_id, jenis, jumlah, keterangan, store_id) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-                [newId, nama_barang, user_id, 'masuk', stok, 'Stok Awal', store_id]
+                [newId, nama_barang, user_id, 'masuk', stok, initialLogDesc, store_id]
             );
         }
 
@@ -86,8 +95,8 @@ export async function POST(request: Request) {
             satuan
         }, { status: 201 });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('POST /api/inventory Error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error: ' + error.message }, { status: 500 });
     }
 }

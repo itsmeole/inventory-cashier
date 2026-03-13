@@ -19,6 +19,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         const satuan = formData.get('satuan') as string;
         const user_id = formData.get('user_id') ? parseInt(formData.get('user_id') as string) : null;
         const file = formData.get('image') as File | null;
+        const info_satuan_beli = formData.get('info_satuan_beli') as string || 'Pcs';
+        const info_jumlah_beli = parseFloat(formData.get('info_jumlah_beli') as string) || stok;
 
         // Get old stock first for logging and ensure it belongs to the store
         const { rows: oldItem } = await pool.query('SELECT stok FROM barang WHERE barang_id = $1 AND store_id = $2', [id, store_id]);
@@ -50,9 +52,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         await pool.query(query, queryParams);
 
         if (diff !== 0) {
+            let editLogDesc = 'Edit Manual';
+            if (diff > 0 && (['Box', 'Pak'].includes(info_satuan_beli) || info_satuan_beli !== satuan)) {
+                editLogDesc += ` (+${info_jumlah_beli} ${info_satuan_beli})`;
+            }
+
             await pool.query(
                 'INSERT INTO stok_log (barang_id, nama_barang, user_id, jenis, jumlah, keterangan, store_id) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-                [id, nama_barang, user_id, diff > 0 ? 'masuk' : 'penyesuaian', Math.abs(diff), 'Edit Manual', store_id]
+                [id, nama_barang, user_id, diff > 0 ? 'masuk' : 'penyesuaian', Math.abs(diff), editLogDesc, store_id]
             );
         }
 

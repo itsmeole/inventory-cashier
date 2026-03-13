@@ -17,11 +17,13 @@ export default function InventoryPage() {
 
     const [formData, setFormData] = useState({
         nama_barang: '',
-        harga_beli: '',
+        total_harga_beli: '',
+        jumlah_beli: '',
+        satuan_beli: 'Pcs',
+        isi_perbox: '',
         harga_jual: '',
-        stok: '',
         stok_minimum: '',
-        satuan: 'Pcs'
+        satuan_jual: 'Pcs'
     });
 
     const fetchItems = () => {
@@ -44,11 +46,25 @@ export default function InventoryPage() {
 
         const data = new FormData();
         data.append('nama_barang', formData.nama_barang);
-        data.append('harga_beli', formData.harga_beli);
+
+        // Core Calculation Logic
+        const isBulk = ['Box', 'Pak'].includes(formData.satuan_beli);
+        const jumlahBeli = parseFloat(formData.jumlah_beli) || 0;
+        const isiPerbox = isBulk ? (parseFloat(formData.isi_perbox) || 1) : 1;
+        
+        const calculatedStok = isBulk ? (jumlahBeli * isiPerbox) : jumlahBeli;
+        const totalHargaBeli = parseFloat(formData.total_harga_beli) || 0;
+        const calculatedHargaBeli = calculatedStok > 0 ? (totalHargaBeli / calculatedStok) : 0;
+
+        data.append('harga_beli', calculatedHargaBeli.toString());
+        data.append('stok', calculatedStok.toString());
         data.append('harga_jual', formData.harga_jual);
-        data.append('stok', formData.stok);
         data.append('stok_minimum', formData.stok_minimum);
-        data.append('satuan', formData.satuan);
+        data.append('satuan', formData.satuan_jual);
+
+        // Extra info for beautiful stok log
+        data.append('info_satuan_beli', formData.satuan_beli);
+        data.append('info_jumlah_beli', formData.jumlah_beli);
 
         // Append user_id for logging
         const userStr = localStorage.getItem('user');
@@ -61,14 +77,14 @@ export default function InventoryPage() {
             data.append('image', imageFile);
         }
 
-        await fetch(url, {
+        await fetchWithAuth(url, {
             method,
             body: data
         });
 
         setShowModal(false);
         setEditingItem(null);
-        setFormData({ nama_barang: '', harga_beli: '', harga_jual: '', stok: '', stok_minimum: '', satuan: 'Pcs' });
+        setFormData({ nama_barang: '', total_harga_beli: '', jumlah_beli: '', satuan_beli: 'Pcs', isi_perbox: '', harga_jual: '', stok_minimum: '', satuan_jual: 'Pcs' });
         setImageFile(null);
         setPreviewUrl(null);
         fetchItems();
@@ -76,13 +92,18 @@ export default function InventoryPage() {
 
     const handleEdit = (item: any) => {
         setEditingItem(item);
+        // Note: For editing, we might want to pre-fill total_harga_beli or simply let users manage raw stok if they prefer, 
+        // but to keep it simple and match the new form, we do reverse math if possible, or just set it based on current per-piece.
+        // For editing existing per-piece items seamlessly:
         setFormData({
             nama_barang: item.nama_barang,
-            harga_beli: item.harga_beli,
+            total_harga_beli: (item.harga_beli * item.stok).toString(),
+            jumlah_beli: item.stok.toString(),
+            satuan_beli: 'Pcs',
+            isi_perbox: '',
             harga_jual: item.harga_jual,
-            stok: item.stok,
             stok_minimum: item.stok_minimum,
-            satuan: item.satuan || 'Pcs'
+            satuan_jual: item.satuan || 'Pcs'
         });
         setPreviewUrl(item.gambar || null);
         setImageFile(null);
@@ -111,7 +132,7 @@ export default function InventoryPage() {
 
         if (result.isConfirmed) {
             try {
-                const res = await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
+                const res = await fetchWithAuth(`/api/inventory/${id}`, { method: 'DELETE' });
                 const data = await res.json();
 
                 if (!res.ok) {
@@ -133,7 +154,7 @@ export default function InventoryPage() {
                 <button
                     onClick={() => {
                         setEditingItem(null);
-                        setFormData({ nama_barang: '', harga_beli: '', harga_jual: '', stok: '', stok_minimum: '', satuan: 'Pcs' });
+                        setFormData({ nama_barang: '', total_harga_beli: '', jumlah_beli: '', satuan_beli: 'Pcs', isi_perbox: '', harga_jual: '', stok_minimum: '', satuan_jual: 'Pcs' });
                         setImageFile(null);
                         setPreviewUrl(null);
                         setShowModal(true);
@@ -239,15 +260,57 @@ export default function InventoryPage() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-sm font-medium">Harga Beli</label>
+                                    <label className="text-sm font-medium">Total Harga Beli</label>
                                     <input
                                         type="number" required
                                         step="0.01"
                                         className="w-full rounded-lg border p-2 text-sm outline-none focus:border-blue-500"
-                                        value={formData.harga_beli}
-                                        onChange={e => setFormData({ ...formData, harga_beli: e.target.value })}
+                                        value={formData.total_harga_beli}
+                                        onChange={e => setFormData({ ...formData, total_harga_beli: e.target.value })}
                                     />
                                 </div>
+                                <div>
+                                    <label className="text-sm font-medium">Jumlah Beli</label>
+                                    <input
+                                        type="number" required
+                                        step="0.01"
+                                        className="w-full rounded-lg border p-2 text-sm outline-none focus:border-blue-500"
+                                        value={formData.jumlah_beli}
+                                        onChange={e => setFormData({ ...formData, jumlah_beli: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Satuan Beli</label>
+                                    <select
+                                        className="w-full rounded-lg border border-slate-300 p-2 text-sm outline-none focus:border-blue-500"
+                                        value={formData.satuan_beli}
+                                        onChange={e => setFormData({ ...formData, satuan_beli: e.target.value })}
+                                    >
+                                        <option value="Pcs">Pcs</option>
+                                        <option value="Box">Box</option>
+                                        <option value="Pak">Pak</option>
+                                        <option value="Kg">Kg</option>
+                                        <option value="Liter">Liter</option>
+                                        <option value="Botol">Botol</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Isi perbox/pak</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        disabled={!['Box', 'Pak'].includes(formData.satuan_beli)}
+                                        className="w-full rounded-lg border border-slate-300 p-2 text-sm outline-none focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
+                                        value={formData.isi_perbox}
+                                        onChange={e => setFormData({ ...formData, isi_perbox: e.target.value })}
+                                        required={['Box', 'Pak'].includes(formData.satuan_beli)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium">Harga Jual</label>
                                     <input
@@ -258,38 +321,24 @@ export default function InventoryPage() {
                                         onChange={e => setFormData({ ...formData, harga_jual: e.target.value })}
                                     />
                                 </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Stok Awal</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        className="w-full rounded-lg border border-slate-300 p-2 outline-none focus:border-blue-500"
-                                        value={formData.stok}
-                                        onChange={e => setFormData({ ...formData, stok: e.target.value })}
-                                        required
-                                    />
-                                </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Stok Minimum</label>
                                     <input
-                                        type="number"
+                                        type="number" required
                                         step="0.01"
-                                        className="w-full rounded-lg border border-slate-300 p-2 outline-none focus:border-blue-500"
+                                        className="w-full rounded-lg border border-slate-300 p-2 text-sm outline-none focus:border-blue-500"
                                         value={formData.stok_minimum}
                                         onChange={e => setFormData({ ...formData, stok_minimum: e.target.value })}
-                                        required
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Satuan</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Satuan Jual</label>
                                 <select
-                                    className="w-full rounded-lg border border-slate-300 p-2 outline-none focus:border-blue-500"
-                                    value={formData.satuan}
-                                    onChange={e => setFormData({ ...formData, satuan: e.target.value })}
+                                    className="w-full rounded-lg border border-slate-300 p-2 text-sm outline-none focus:border-blue-500"
+                                    value={formData.satuan_jual}
+                                    onChange={e => setFormData({ ...formData, satuan_jual: e.target.value })}
                                 >
                                     <option value="Pcs">Pcs</option>
                                     <option value="Kg">Kg</option>
@@ -300,7 +349,7 @@ export default function InventoryPage() {
                                 </select>
                             </div>
 
-                            <button type="submit" className="w-full rounded-lg bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-700">Simpan</button>
+                            <button type="submit" className="w-full mt-4 rounded-lg bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-700">Simpan</button>
                         </form>
                     </div>
                 </div>
