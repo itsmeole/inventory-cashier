@@ -4,11 +4,18 @@ import { useEffect, useState } from 'react';
 import { DollarSign, Package, AlertTriangle, TrendingUp, TrendingDown, RefreshCw, User } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/fetcher';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
+import { usePagination } from '@/lib/usePagination';
+import Pagination from '@/components/Pagination';
+
+const LOG_PER_PAGE = 10;
 
 export default function DashboardPage() {
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [userName, setUserName] = useState('');
+
+    const stockLogs = stats?.stockLogs || [];
+    const { currentItems: pagedLogs, currentPage: logPage, totalPages: logTotalPages, goToPage: goToLogPage } = usePagination(stockLogs, LOG_PER_PAGE);
 
     useEffect(() => {
         const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
@@ -292,7 +299,7 @@ export default function DashboardPage() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    stats?.stockLogs?.map((log: any) => (
+                                    pagedLogs.map((log: any) => (
                                         <tr key={log.log_id} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="px-6 py-4 text-slate-500 text-sm whitespace-nowrap">
                                                 {new Date(log.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: '2-digit' })},
@@ -320,6 +327,13 @@ export default function DashboardPage() {
                             </tbody>
                         </table>
                     </div>
+                    <Pagination
+                        currentPage={logPage}
+                        totalPages={logTotalPages}
+                        onPageChange={goToLogPage}
+                        totalItems={stockLogs.length}
+                        itemsPerPage={LOG_PER_PAGE}
+                    />
                 </div>
             </div>
         </div>

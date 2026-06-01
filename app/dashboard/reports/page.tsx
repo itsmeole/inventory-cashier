@@ -3,16 +3,24 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import { BarChart3, Calendar, DollarSign, TrendingUp, TrendingDown, Filter, Printer } from 'lucide-react';
+import { BarChart3, Calendar, DollarSign, TrendingUp, TrendingDown, Filter, Printer, Download } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/fetcher';
+import { usePagination } from '@/lib/usePagination';
+import Pagination from '@/components/Pagination';
+
+const TRX_PER_PAGE = 10;
 
 export default function ReportsPage() {
-    const [filter, setFilter] = useState('daily'); // daily, weekly, monthly, custom
+    const [filter, setFilter] = useState('daily');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [dumping, setDumping] = useState(false);
     const router = useRouter();
+
+    const transactions = data?.transactions || [];
+    const { currentItems: pagedTrx, currentPage: trxPage, totalPages: trxTotalPages, goToPage: goToTrxPage } = usePagination(transactions, TRX_PER_PAGE);
 
     useEffect(() => {
         // Role Check
@@ -133,6 +141,32 @@ export default function ReportsPage() {
         }
     };
 
+    const handleDump = async () => {
+        try {
+            setDumping(true);
+            const res = await fetchWithAuth('/api/dump');
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Gagal membuat dump');
+            }
+            const blob = await res.blob();
+            const disposition = res.headers.get('Content-Disposition') || '';
+            const match = disposition.match(/filename="(.+?)"/);
+            const filename = match ? match[1] : `dump-${Date.now()}.sql`;
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (err: any) {
+            Swal.fire('Gagal', err.message, 'error');
+        } finally {
+            setDumping(false);
+        }
+    };
+
     const periodLabels: any = {
         daily: 'Hari Ini',
         weekly: 'Minggu Ini',
@@ -213,6 +247,16 @@ export default function ReportsPage() {
                         <Printer size={18} />
                         Cetak
                     </button>
+
+                    <button
+                        onClick={handleDump}
+                        disabled={loading || dumping}
+                        className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-700 active:scale-95 disabled:opacity-60"
+                        title="Download semua data toko sebagai file SQL untuk backup/restore"
+                    >
+                        <Download size={18} />
+                        {dumping ? 'Membuat...' : 'SQL Dump'}
+                    </button>
                 </div>
             </div>
 
@@ -270,11 +314,11 @@ export default function ReportsPage() {
                                 <tbody className="divide-y divide-slate-100">
                                     {data?.transactions?.length === 0 ? (
                                         <tr><td colSpan={5} className="p-6 text-center text-slate-500">Belum ada transaksi pada periode ini.</td></tr>
-                                    ) : data?.transactions?.map((trx: any) => {
+                                    ) : pagedTrx.map((trx: any) => {
                                         const items = typeof trx.items === 'string' ? JSON.parse(trx.items) : trx.items;
                                         return (
                                             <tr key={trx.transaksi_id} className="hover:bg-slate-50 relative group">
-                                                <td className="px-6 py-3 font-medium text-slate-900 align-top">#{trx.transaksi_id}</td>
+                                                <td className="px-6 py-3 font-mono text-xs text-slate-500 align-top">{String(trx.transaksi_id).slice(0, 8)}…</td>
                                                 <td className="px-6 py-3 text-slate-600 align-top">
                                                     {new Date(trx.tanggal_transaksi).toLocaleString('id-ID', {
                                                         dateStyle: 'medium',
@@ -301,6 +345,13 @@ export default function ReportsPage() {
                                 </tbody>
                             </table>
                         </div>
+                        <Pagination
+                            currentPage={trxPage}
+                            totalPages={trxTotalPages}
+                            onPageChange={goToTrxPage}
+                            totalItems={transactions.length}
+                            itemsPerPage={TRX_PER_PAGE}
+                        />
                     </div>
                 </>
             )}

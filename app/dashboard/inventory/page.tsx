@@ -4,6 +4,10 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, X } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { fetchWithAuth } from '@/lib/fetcher';
+import { usePagination } from '@/lib/usePagination';
+import Pagination from '@/components/Pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 export default function InventoryPage() {
     const [items, setItems] = useState<any[]>([]);
@@ -14,6 +18,8 @@ export default function InventoryPage() {
 
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+    const { currentItems, currentPage, totalPages, goToPage } = usePagination(items, ITEMS_PER_PAGE);
 
     const [formData, setFormData] = useState({
         nama_barang: '',
@@ -192,7 +198,9 @@ export default function InventoryPage() {
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
                                 <tr><td colSpan={7} className="p-6 text-center">Loading...</td></tr>
-                            ) : items.map((item) => (
+                            ) : currentItems.length === 0 ? (
+                                <tr><td colSpan={7} className="p-6 text-center text-slate-400">Tidak ada barang ditemukan.</td></tr>
+                            ) : currentItems.map((item) => (
                                 <tr key={item.barang_id} className="hover:bg-slate-50">
                                     <td className="px-6 py-4">
                                         {item.gambar ? (
@@ -221,6 +229,13 @@ export default function InventoryPage() {
                         </tbody>
                     </table>
                 </div>
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={goToPage}
+                    totalItems={items.length}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                />
             </div>
 
             {/* Modal */}

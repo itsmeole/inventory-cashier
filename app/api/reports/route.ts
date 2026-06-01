@@ -288,8 +288,8 @@ export async function GET(request: Request) {
                     dt.subtotal
                 FROM detail_transaksi dt
                 LEFT JOIN barang b ON dt.barang_id = b.barang_id
-                WHERE dt.transaksi_id IN (${transactionIds.join(',')})
-            `);
+                WHERE dt.transaksi_id = ANY($1::uuid[])
+            `, [transactionIds]);
 
             transactions.forEach((t: any) => {
                 const relatedItems = details.filter((d: any) => d.transaksi_id === t.transaksi_id);
