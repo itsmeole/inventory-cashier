@@ -22,7 +22,7 @@ export async function compressImage(buffer: Buffer): Promise<{ buffer: Buffer; c
             withoutEnlargement: true // tidak perbesar jika gambar sudah kecil
         })
         .webp({ quality: 80 })      // convert ke WebP, quality 80%
-        .withMetadata(false)        // hapus metadata EXIF
+        // metadata EXIF dihapus secara default oleh sharp (tidak perlu withMetadata)
         .toBuffer();
 
     return {
