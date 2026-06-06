@@ -142,30 +142,71 @@ export default function ReportsPage() {
     };
 
     const handleDump = async () => {
-        try {
-            setDumping(true);
-            const res = await fetchWithAuth('/api/dump');
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || 'Gagal membuat dump');
-            }
-            const blob = await res.blob();
-            const disposition = res.headers.get('Content-Disposition') || '';
-            const match = disposition.match(/filename="(.+?)"/);
-            const filename = match ? match[1] : `dump-${Date.now()}.sql`;
+        const { value: password, isConfirmed } = await Swal.fire({
+            title: '🔐 Konfirmasi Download',
+            html: `
+                <p style="color:#475569;font-size:14px;margin-bottom:16px;">
+                    File dump mengandung <b>seluruh data toko</b> termasuk password akun.<br/>
+                    Masukkan password akun Anda untuk melanjutkan.
+                </p>
+            `,
+            input: 'password',
+            inputPlaceholder: 'Masukkan password Anda',
+            inputAttributes: { autocomplete: 'current-password' },
+            showCancelButton: true,
+            confirmButtonText: 'Download',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: '#059669',
+            showLoaderOnConfirm: true,
+            allowOutsideClick: () => !Swal.isLoading(),
+            preConfirm: async (pwd: string) => {
+                if (!pwd) {
+                    Swal.showValidationMessage('Password tidak boleh kosong');
+                    return false;
+                }
+                try {
+                    const res = await fetchWithAuth('/api/dump', {
+                        headers: { 'x-dump-password': pwd }
+                    });
 
+                    if (!res.ok) {
+                        const err = await res.json();
+                        Swal.showValidationMessage(err.error || 'Gagal membuat dump');
+                        return false;
+                    }
+
+                    // Kembalikan blob agar bisa diproses setelah popup ditutup
+                    const blob = await res.blob();
+                    const disposition = res.headers.get('Content-Disposition') || '';
+                    const match = disposition.match(/filename="(.+?)"/);
+                    const filename = match ? match[1] : `dump-${Date.now()}.sql`;
+                    return { blob, filename };
+                } catch {
+                    Swal.showValidationMessage('Terjadi kesalahan jaringan');
+                    return false;
+                }
+            }
+        });
+
+        if (isConfirmed && password) {
+            const { blob, filename } = password as any;
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = filename;
             a.click();
             URL.revokeObjectURL(url);
-        } catch (err: any) {
-            Swal.fire('Gagal', err.message, 'error');
-        } finally {
-            setDumping(false);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: `File "${filename}" berhasil diunduh.`,
+                timer: 2500,
+                showConfirmButton: false,
+            });
         }
     };
+
 
     const periodLabels: any = {
         daily: 'Hari Ini',
@@ -250,12 +291,12 @@ export default function ReportsPage() {
 
                     <button
                         onClick={handleDump}
-                        disabled={loading || dumping}
+                        disabled={loading}
                         className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-700 active:scale-95 disabled:opacity-60"
                         title="Download semua data toko sebagai file SQL untuk backup/restore"
                     >
                         <Download size={18} />
-                        {dumping ? 'Membuat...' : 'SQL Dump'}
+                        SQL Dump
                     </button>
                 </div>
             </div>

@@ -3,16 +3,23 @@ import pool from '@/lib/db';
 
 /**
  * Escape nilai SQL untuk INSERT statements.
- * Handles null, numbers, booleans, dates, and strings.
+ * Handles null, numbers, booleans, Date objects, and strings.
  */
 function escapeValue(val: any): string {
     if (val === null || val === undefined) return 'NULL';
     if (typeof val === 'number') return val.toString();
     if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+    // Date object dari driver pg → format ISO 8601 yang diterima PostgreSQL
+    if (val instanceof Date) {
+        // Format: 'YYYY-MM-DD HH:MM:SS'
+        const iso = val.toISOString().replace('T', ' ').replace('Z', '');
+        return `'${iso}'`;
+    }
     // Escape single quotes dan backslash
     const str = String(val).replace(/\\/g, '\\\\').replace(/'/g, "''");
     return `'${str}'`;
 }
+
 
 /**
  * Generate INSERT statements dari array rows dan nama tabel.
@@ -34,12 +41,35 @@ function generateInserts(tableName: string, rows: any[]): string {
 export async function GET(request: Request) {
     try {
         const store_id = request.headers.get('x-store-id');
+        const user_id  = request.headers.get('x-user-id');
+        const provided = request.headers.get('x-dump-password');
+
         if (!store_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        // Wajib ada password dan user_id
+        if (!user_id || !provided) {
+            return NextResponse.json({ error: 'Password diperlukan untuk mengunduh dump.' }, { status: 400 });
+        }
+
+        // Verifikasi password terhadap user yang sedang login
+        const { rows: userRows } = await pool.query(
+            'SELECT password FROM public.users WHERE user_id = $1 AND store_id = $2',
+            [user_id, store_id]
+        );
+
+        if (userRows.length === 0) {
+            return NextResponse.json({ error: 'User tidak ditemukan.' }, { status: 404 });
+        }
+
+        if (userRows[0].password !== provided) {
+            return NextResponse.json({ error: 'Password salah. Akses ditolak.' }, { status: 403 });
+        }
+
 
         // Query semua data milik toko ini
         const [stores, users, barang, transaksi, detailTransaksi, stokLog] = await Promise.all([
             pool.query('SELECT * FROM public.stores WHERE store_id = $1', [store_id]),
-            pool.query('SELECT user_id, nama, username, role, created_at, store_id FROM public.users WHERE store_id = $1 ORDER BY created_at', [store_id]),
+            pool.query('SELECT user_id, nama, username, password, role, created_at, store_id FROM public.users WHERE store_id = $1 ORDER BY created_at', [store_id]),
             pool.query('SELECT * FROM public.barang WHERE store_id = $1 ORDER BY created_at', [store_id]),
             pool.query('SELECT * FROM public.transaksi WHERE store_id = $1 ORDER BY tanggal_transaksi', [store_id]),
             pool.query(`

@@ -9,6 +9,9 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
                 if (user.store_id) {
                     headers.set('x-store-id', user.store_id.toString());
                 }
+                if (user.user_id) {
+                    headers.set('x-user-id', user.user_id.toString());
+                }
             } catch (e) {}
         }
     }
